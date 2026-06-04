@@ -1,5 +1,12 @@
-// Telegram bot Apps Script — yangilangan versiya
-var TOKEN = "8741864109:AAHkLoUuf2TsR1ReL-eD6kRmKNLoZhXn1bQ";
+// Telegram bot Apps Script — updated with new TOKEN and Web App helpers
+// IMPORTANT: For security, consider storing the token in Script Properties and remove the hardcoded token later.
+var TOKEN = (function(){
+  // Prefer token from Script Properties if set, otherwise fallback to the provided token below
+  var prop = PropertiesService.getScriptProperties().getProperty('BOT_TOKEN');
+  if (prop) return prop;
+  return "8729282707:AAF26nrkfjDOi6oq7gr2U9FQ9fhWClMT43g"; // fallback token (you provided)
+})();
+
 var ADMIN_ID = 8485164743;
 var API_URL = "https://api.telegram.org/bot" + TOKEN + "/";
 
@@ -41,6 +48,19 @@ function doPost(e) {
     else if(update.callback_query) handleCallback(update.callback_query);
   }
   return HtmlService.createHtmlOutput("OK");
+}
+
+// Simple health-check GET endpoint for Web App
+function doGet(e) {
+  return HtmlService.createHtmlOutput("OK - Telegram Bot Web App is running.");
+}
+
+// Helper to set Telegram webhook to your deployed Web App URL
+function setWebhook(webAppUrl) {
+  if (!webAppUrl) throw new Error('Please provide the deployed Web App URL.');
+  var url = API_URL + 'setWebhook?url=' + encodeURIComponent(webAppUrl);
+  var resp = UrlFetchApp.fetch(url);
+  return resp.getContentText();
 }
 
 function handleMessage(message) {
@@ -347,6 +367,13 @@ function editMessageCaption(chatId, messageId, caption) {
 function deleteMessage(chatId, messageId) { try { UrlFetchApp.fetch(API_URL + "deleteMessage?chat_id=" + chatId + "&message_id=" + messageId); } catch (e) {} }
 function answerCallbackQuery(id) { UrlFetchApp.fetch(API_URL + "answerCallbackQuery?callback_query_id=" + id); }
 
+// Utility: set BOT_TOKEN into Script Properties (run this once from Apps Script editor for security)
+function setScriptToken(token) {
+  if (!token) throw new Error('Token is required');
+  PropertiesService.getScriptProperties().setProperty('BOT_TOKEN', token);
+  return 'Token saved to Script Properties.';
+}
+
 // --- GOOGLE SHEETS / DRIVE INTEGRATION ---
 function logOrderToSheet(chatId, from, pkg, fileId, isEdited) {
   if (!SPREADSHEET_ID) {
@@ -498,7 +525,4 @@ function getOrCreateFolder(name) {
 
 /* 
   Qo'shimcha takliflar (dashboard formulas, analytics va "dynamic personality" funktsiyalari)
-  - Oylik daromad, Top-5 mijoz formulasini Sheets ichida yaratamiz (men avtomatik formula qo'shish yoki siz xohlasangiz)
-  - "Blacklist" varaqiga yozish va bot ichida bir soat bloklash mexanizmini ham qo'shish mumkin:
-    masalan: blacklist ga yozilganda PropertiesService yoki CacheService orqali "blocked_{userId}" -> timestamp saqlab, handleMessage boshida tekshirish.
-  - "Bot_Status" varag'i uchun funksiya: oxirgi 120 daqiqadagi buy
+*/
